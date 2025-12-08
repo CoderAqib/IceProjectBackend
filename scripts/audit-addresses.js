@@ -5,9 +5,9 @@
   Defaults to mongodb://localhost:27017/sales_system
 */
 const mongoose = require('mongoose');
-
+db_url = process.env.MONGODB_URI
 async function main() {
-  const uri = process.argv[2] || 'mongodb+srv://IceMan:Ddr4%40ddr@cluster0.ux21gni.mongodb.net/IceMans_Ice';
+  const uri = process.argv[2] || db_url;
   await mongoose.connect(uri);
   const User = require('../src/models/User');
   const Customer = require('../src/models/Customer');

@@ -1,12 +1,12 @@
 const mongoose = require('mongoose');
-
+db_url = 'mongodb://localhost:27017/sales_system';
 async function createSampleData() {
     try {
         console.log('🗄️ Creating sample data for MongoDB Compass');
         console.log('=============================================');
         
         // Connect to MongoDB
-        await mongoose.connect('mongodb+srv://IceMan:Ddr4%40ddr@cluster0.ux21gni.mongodb.net/IceMans_Ice');
+        await mongoose.connect(db_url);
         console.log('✅ Connected to MongoDB');
         
         // Import models
