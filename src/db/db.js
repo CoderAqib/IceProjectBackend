@@ -13,7 +13,7 @@ class Database {
       return process.env.MONGODB_URI_TEST;
     }
     // Otherwise use main database
-    return process.env.MONGODB_URI || 'mongodb+srv://IceMan:Ddr4%40ddr@cluster0.ux21gni.mongodb.net/IceMans_Ice';
+    return process.env.MONGODB_URI;
   }
 
   maskUri(uri) {
