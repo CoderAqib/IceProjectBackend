@@ -1,4 +1,5 @@
 const express = require("express");
+const crypto = require("crypto");
 const Joi = require("joi");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -8,6 +9,7 @@ const logger = require("../utils/logger");
 const { requireAuth } = require("../middleware/auth");
 const { requireRole } = require("../middleware/rbac");
 const { getDAL } = require("../dal");
+const { sendPasswordResetEmail } = require("../services/emailService");
 
 const router = express.Router();
 
@@ -61,12 +63,16 @@ const refreshSchema = Joi.object({
   refreshToken: Joi.string().required(),
 });
 
-const resetPasswordSchema = Joi.object({
+const forgotPasswordSchema = Joi.object({
   email: Joi.string().email().required(),
+});
+
+const resetPasswordSchema = Joi.object({
+  token: Joi.string().required(),
   newPassword: Joi.string().min(8).required(),
-  confirmPassword: Joi.string().valid(Joi.ref('newPassword')).required().messages({
-    'any.only': 'Passwords do not match'
-  })
+  confirmPassword: Joi.string().valid(Joi.ref("newPassword")).required().messages({
+    "any.only": "Passwords do not match",
+  }),
 });
 
 router.post("/register", async (req, res, next) => {
@@ -240,39 +246,109 @@ router.post("/login", async (req, res, next) => {
 });
 
 
-// Simple direct reset password endpoint (no email token flow) per requirements
-router.post('/reset-password', async (req, res, next) => {
+// Request a password reset email (Resend). Always returns a generic success
+// message so callers cannot probe whether an email is registered.
+router.post("/forgot-password", async (req, res, next) => {
   try {
-    const { error, value } = resetPasswordSchema.validate(req.body);
+    const { error, value } = forgotPasswordSchema.validate(req.body);
     if (error) {
       return res.status(400).json({
-        error: 'Validation Error',
-        message: error.details[0].message
+        error: "Validation Error",
+        message: error.details[0].message,
       });
     }
+
+    const genericMessage =
+      "If an account exists for that email, a password reset link has been sent.";
 
     const dal = getDAL();
     const normalizedEmail = String(value.email).trim().toLowerCase();
     const user = await dal.getUserByEmail(normalizedEmail);
 
     if (!user) {
-      return res.status(404).json({
-        error: 'Not Found',
-        message: 'No account found with this email address'
+      return res.json({ success: true, message: genericMessage });
+    }
+
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(rawToken)
+      .digest("hex");
+
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await user.save();
+
+    const frontendBase = (config.frontend.url || "https://icemansice.com").replace(
+      /\/$/,
+      ""
+    );
+    const resetUrl = `${frontendBase}/reset-password?token=${rawToken}`;
+
+    try {
+      await sendPasswordResetEmail(user.email, resetUrl, user.name);
+      logger.info("Password reset email sent", { userId: user.id, email: user.email });
+    } catch (emailError) {
+      logger.error("Failed to send password reset email", {
+        userId: user.id,
+        email: user.email,
+        error: emailError.message,
+      });
+      user.resetPasswordToken = null;
+      user.resetPasswordExpires = null;
+      await user.save();
+      return res.status(503).json({
+        error: "Email Delivery Failed",
+        message: "Unable to send password reset email. Please try again later.",
       });
     }
 
-    // Hash the new password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(value.newPassword, salt);
+    return res.json({ success: true, message: genericMessage });
+  } catch (err) {
+    next(err);
+  }
+});
 
-    // Update password directly
-    user.password = hashedPassword;
+// Complete password reset using the one-time token from the email link
+router.post("/reset-password", async (req, res, next) => {
+  try {
+    const { error, value } = resetPasswordSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({
+        error: "Validation Error",
+        message: error.details[0].message,
+      });
+    }
+
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(value.token)
+      .digest("hex");
+
+    const User = require("../models/User");
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: new Date() },
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        error: "Invalid Token",
+        message: "This password reset link is invalid or has expired.",
+      });
+    }
+
+    // Assign plain password; User pre-save hook hashes it once
+    user.password = value.newPassword;
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
     await user.save();
 
-    return res.json({ 
-      message: 'Password has been reset successfully',
-      success: true
+    logger.info("Password reset completed", { userId: user.id, email: user.email });
+
+    return res.json({
+      message: "Password has been reset successfully",
+      success: true,
     });
   } catch (err) {
     next(err);

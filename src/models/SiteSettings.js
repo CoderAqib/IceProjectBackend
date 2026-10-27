@@ -102,7 +102,7 @@ const siteSettingsSchema = new mongoose.Schema(
         type: String,
         trim: true,
         lowercase: true,
-        default: "icemansice@gmail.com",
+        default: "moe@icemansice.com",
         match: [/^\S+@\S+\.\S+$/, "Please provide a valid email address"],
       },
     },

@@ -304,11 +304,63 @@ async function sendRegularOrderEmail(orderData, recipientEmail) {
   }
 }
 
+/**
+ * Send password reset email with a one-time link
+ */
+async function sendPasswordResetEmail(to, resetUrl, name = 'there') {
+  const subject = "Reset your IceMan's Ice password";
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; }
+        .header { background: #1e40af; color: white; padding: 24px; text-align: center; }
+        .content { padding: 24px; background: #f9fafb; }
+        .button {
+          display: inline-block;
+          background: #2563eb;
+          color: #ffffff !important;
+          text-decoration: none;
+          padding: 12px 24px;
+          border-radius: 6px;
+          font-weight: bold;
+          margin: 16px 0;
+        }
+        .footer { padding: 16px 24px; font-size: 12px; color: #6b7280; text-align: center; }
+        .muted { color: #6b7280; font-size: 14px; word-break: break-all; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1 style="margin:0;">IceMan's Ice</h1>
+      </div>
+      <div class="content">
+        <p>Hi ${name},</p>
+        <p>We received a request to reset your password. Click the button below to choose a new password. This link expires in <strong>1 hour</strong>.</p>
+        <p style="text-align:center;">
+          <a class="button" href="${resetUrl}">Reset Password</a>
+        </p>
+        <p class="muted">If the button doesn't work, copy and paste this link into your browser:<br>${resetUrl}</p>
+        <p>If you did not request a password reset, you can safely ignore this email.</p>
+      </div>
+      <div class="footer">
+        <p>This email was sent by IceMan's Ice</p>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return sendEmail({ to, subject, html });
+}
+
 // Export the email service functions
 module.exports = {
   sendEmail,
   sendEmergencyOrderEmail,
   sendRegularOrderEmail,
+  sendPasswordResetEmail,
   getResendClient
 };
 

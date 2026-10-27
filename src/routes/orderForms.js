@@ -69,7 +69,7 @@ router.post("/emergency", async (req, res) => {
 
     // Get settings to retrieve order email
     const settings = await SiteSettings.getSettings();
-    const recipientEmail = settings.emailSettings?.orderFormsEmail || "aqibaziz423@gmail.com";
+    const recipientEmail = settings.emailSettings?.orderFormsEmail || "moe@icemansice.com";
 
     // Send email
     await sendEmergencyOrderEmail(req.body, recipientEmail);
@@ -131,7 +131,7 @@ router.post("/regular", async (req, res) => {
 
     // Get settings to retrieve order email
     const settings = await SiteSettings.getSettings();
-    const recipientEmail = settings.emailSettings?.orderFormsEmail || "aqibaziz423@gmail.com";
+    const recipientEmail = settings.emailSettings?.orderFormsEmail || "moe@icemansice.com";
 
     // Send email
     await sendRegularOrderEmail(req.body, recipientEmail);

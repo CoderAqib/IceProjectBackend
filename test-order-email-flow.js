@@ -24,7 +24,7 @@ async function testOrderEmailFlow() {
     // Test 1: Get admin email from settings
     logger.info('\n=== Test 1: Retrieving Admin Email from Settings ===');
     const settings = await SiteSettings.getSettings();
-    const adminEmail = settings.emailSettings?.orderFormsEmail || 'aqibaziz423@gmail.com';
+    const adminEmail = settings.emailSettings?.orderFormsEmail || 'moe@icemansice.com';
     logger.info(`Admin email configured: ${adminEmail}`);
 
     // Test 2: Send emergency order email

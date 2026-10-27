@@ -67,6 +67,14 @@ const userSchema = new mongoose.Schema(
       ref: "Customer",
       required: false, // Make it optional during registration
     },
+    resetPasswordToken: {
+      type: String,
+      default: undefined,
+    },
+    resetPasswordExpires: {
+      type: Date,
+      default: undefined,
+    },
   },
   {
     timestamps: true,
@@ -105,6 +113,7 @@ userSchema.index(
 userSchema.index({ lastLogin: -1 }); // For recent logins
 userSchema.index({ createdAt: -1 }); // For user registration tracking
 userSchema.index({ updatedAt: -1 }); // For recent updates
+userSchema.index({ resetPasswordToken: 1 }, { sparse: true });
 
 // Pre-save hook to convert empty email strings to undefined for sparse index
 userSchema.pre("save", async function (next) {
@@ -218,6 +227,8 @@ userSchema.set("toJSON", {
     // Hide sensitive fields
     delete ret.password;
     delete ret.refreshTokens;
+    delete ret.resetPasswordToken;
+    delete ret.resetPasswordExpires;
 
     // Expose addressString and keep address as an object for compatibility
     const stored = doc.get("address");
