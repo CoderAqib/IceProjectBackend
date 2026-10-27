@@ -293,6 +293,8 @@ router.post("/forgot-password", async (req, res, next) => {
         userId: user.id,
         email: user.email,
         error: emailError.message,
+        statusCode: emailError.statusCode,
+        resendError: emailError.resendError,
       });
       user.resetPasswordToken = null;
       user.resetPasswordExpires = null;
@@ -300,6 +302,10 @@ router.post("/forgot-password", async (req, res, next) => {
       return res.status(503).json({
         error: "Email Delivery Failed",
         message: "Unable to send password reset email. Please try again later.",
+        // Include Resend reason in non-production to speed up debugging
+        ...(config.server.env !== "production"
+          ? { detail: emailError.message }
+          : {}),
       });
     }
 

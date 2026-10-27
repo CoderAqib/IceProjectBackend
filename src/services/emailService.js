@@ -52,8 +52,19 @@ async function sendEmail({ to, subject, html }) {
     });
 
     if (error) {
-      logger.error('Resend API error:', error);
-      throw error;
+      logger.error('Resend API error', {
+        to,
+        from: RESEND_FROM_EMAIL,
+        subject,
+        statusCode: error.statusCode,
+        name: error.name,
+        message: error.message,
+        error,
+      });
+      const err = new Error(error.message || 'Resend API error');
+      err.statusCode = error.statusCode;
+      err.resendError = error;
+      throw err;
     }
 
     logger.info(`Email sent successfully to ${to}, ID: ${data.id}`);
@@ -62,8 +73,11 @@ async function sendEmail({ to, subject, html }) {
   } catch (error) {
     logger.error('Failed to send email:', {
       error: error.message,
+      statusCode: error.statusCode,
+      resendError: error.resendError,
       stack: error.stack,
       to,
+      from: RESEND_FROM_EMAIL,
       subject
     });
     throw error;
